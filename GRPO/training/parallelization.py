@@ -420,7 +420,7 @@ class ParallelModule(torch.nn.Module):  # individual worker model
         List[torch.Tensor], Generator[torch.Tensor, None, None]
     ]:
         # torch parallel_apply calls model's forward() function: change the forward function based on mode (generate
-        # for train/ref_logits, or actual forward pass for eval/generate)
+        # for eval/generate, or actual forward pass for train/ref_logits)
         return self._forward_fn(*args)
 
     def _forward_ref(  # forward function for generating reference logits
