@@ -4,7 +4,7 @@ from datasets import Dataset
 import pandas as pd
 from collections import defaultdict
 from huggingface_hub import login
-from utils import games, top_10_models_old_clembench, top_10_models_new_clembench
+from utils import games, top_10_models_old_clembench, top_10_models_new_clembench, prompt_dpo_turn_wordle_no_explanation
 import random
 
 #TODO: reduce this with the following
@@ -65,13 +65,17 @@ def remove_explanation(chat_list):
     if not isinstance(chat_list, list):
         return chat_list
     processed_chat = []
-    for message in chat_list:
+    for idx_, message in enumerate(chat_list):
         if isinstance(message, dict) and 'content' in message:
-            content = message['content']
-            explanation_pos = content.lower().find('explanation:')
-            if explanation_pos != -1:
-                message = message.copy()  # Avoid modifying original
-                message['content'] = content[:explanation_pos].strip()
+            if idx_ == 0:
+                message = message.copy()
+                message['content'] = prompt_dpo_turn_wordle_no_explanation
+            else:
+                content = message['content']
+                explanation_pos = content.lower().find('explanation:')
+                if explanation_pos != -1:
+                    message = message.copy()
+                    message['content'] = content[:explanation_pos].strip()
         processed_chat.append(message)
     return processed_chat
 
@@ -83,6 +87,7 @@ def game_specific_chat_processing(game, df_successful, df_unsuccessful):
 
 def first_turn_limit(other_turns_dict, turn_1_dict, game):
     sample_to_extract = 10000 if game not in ['wordle','wordle_withclue'] else 1000 #TODO: this solve the problem with wordle but still to much samples
+    #sample_to_extract = 10000
 
     result_dict = defaultdict(list)
     for key in other_turns_dict:
@@ -254,9 +259,8 @@ if __name__ == "__main__":
     parser.add_argument('--model_name', default='llama', choices=['llama', 'mistral'], help='base model name for the same family model condition')
     parser.add_argument('--aborted_interactions', default=True, choices=[True, False], help='integrating aborted interactions as negative samples')
     parser.add_argument('--first_turn_limit', default=True, choices=[True, False], help='if there is a turn limit, only first 10K samples considered for the 1st turn per game')
-    #TODO: take this out in common with DPO_training.py and KTO_training.py
     parser.add_argument('--hf_login', default="", help='hf login token')
-    parser.add_argument('--hf_repo', default='', help='huggingface repository to store the created datasets')
+    parser.add_argument('--hf_repo', default='clembench-playpen', help='huggingface repository to store the created datasets')
     args = parser.parse_args()
 
     login(f"{args.hf_login}")
